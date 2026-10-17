@@ -1,0 +1,195 @@
+{
+  "process": "fictional-menu-review-v1",
+  "reviewed_at": "2026-10-17",
+  "reviewer": "Claude (AI assistant), at the request of the project owner. A review of FICTIONAL test data, not a kitchen audit.",
+  "criteria": {
+    "R1": "every ingredient id is known to the taxonomy and itemized (no blend or mix with hidden contents)",
+    "R2": "the Arabic ingredient names correspond one-to-one to the ingredient ids",
+    "R3": "the recorded allergens are exactly the allergens implied by the ingredients (none missing, none extra)",
+    "R4": "recorded allergen ids are known and not duplicated",
+    "R5": "the description does not mention a food, or an allergen, that the record does not declare",
+    "R6": "the dish was read against the description by the reviewer and judged coherent (recorded in the review file)"
+  },
+  "dishes": {
+    "dish_001": {
+      "fingerprint": "53b77fe74bc80e89c7a1cf0a2330ddf4a9c7baa4c57f4d6ec15d93f115750438",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Description (rice, chicken, spices, red sauce) matches the ingredients; the red sauce is the listed tomato. No major allergen is implied by any ingredient."
+    },
+    "dish_002": {
+      "fingerprint": "5b701c8e316e5745107725a9907838b05146f934f81638a695ab9f79a999c73c",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Lamb, rice and itemized spices; ghee is the only allergen source (milk), which is recorded."
+    },
+    "dish_003": {
+      "fingerprint": "e820fa0bd0cc5fff09e94a438119adf8c3c0010da9f5763136ae14558b3b781b",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Chicken, rice, garlic, coriander and chili match the description; nothing implies an allergen."
+    },
+    "dish_004": {
+      "fingerprint": "3bc6fb5354068fd1e4a665d915d1bda47f0291626436c46d75596687452438b9",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Vegetable biryani: every vegetable and spice in the description is listed; no animal ingredient, no dairy listed, no allergen implied."
+    },
+    "dish_005": {
+      "fingerprint": "062462a2b52009d409da9d4ed9c9debe221c2bd7e98fca570fe4a20cec6075e0",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Hammour is the fish allergen and is recorded; the herbs and grilled vegetables in the description are itemized (parsley, coriander, bell pepper, eggplant, zucchini)."
+    },
+    "dish_006": {
+      "fingerprint": "ce3be510a4c49e8fb38fb2dc147053bcad8197b3170545c00ed53a4bf04b89f5",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Tahini is the sesame source and is recorded; chickpeas, lemon, garlic and olive oil match the description."
+    },
+    "dish_007": {
+      "fingerprint": "bf9f66d9f977d6aac97557aa4d77cd442667fd7b15e6ab37afaa9e65567bb644",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Dough is treated as wheat dough (gluten) per the taxonomy; the two cheeses carry milk. Both are recorded. Assumes the dough contains no egg or milk."
+    },
+    "dish_008": {
+      "fingerprint": "dffa067c758071b7354cfa51ec5de5edc46188d628b7b0783da54976047b9800",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Wheat dough (gluten) with minced meat, onion, chili and coriander as described. Assumes the dough contains no egg or milk."
+    },
+    "dish_009": {
+      "fingerprint": "bf5bf850460bb7e6e0118f2c9193d8d4c34c52b0f1eff151edeb94c63fee1024",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Toasted bread is the gluten source and is recorded; the fresh vegetables, sumac and pomegranate molasses match the description."
+    },
+    "dish_010": {
+      "fingerprint": "ce3448cc5195f7d3236e14ca168cddb22e87bd6365f4052e96568a058082f11d",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Lentil soup: lentils are not one of the 14 tracked allergen categories; no listed ingredient implies one."
+    },
+    "dish_011": {
+      "fingerprint": "cf06c8909b29dabd0c61809b9a20e32fb2a607da0d661256b5c325c5a63fc6c0",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Kunafa pastry (gluten), akkawi cheese and ghee (milk) and pistachio (tree nuts) are all recorded; the syrup is plain sugar syrup."
+    },
+    "dish_012": {
+      "fingerprint": "30f3e7f989a5879387abb1bcca571e629b40c449bf5016384d5ed7458cc1ebff",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Phyllo (gluten), milk and qishta (milk) and almond (tree nuts) are recorded; the description's nuts are the listed almond."
+    },
+    "dish_013": {
+      "fingerprint": "367f9cf53f6f3bfa26cb0bc582b9387be60e452098d9941e23c7bf2c9c59990b",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Fresh fruit and honey only; none of the 14 tracked allergen categories is implied (fruit allergies outside those categories are not tracked)."
+    },
+    "dish_014": {
+      "fingerprint": "86e169a6e9bac0f5d91e5be5687b303d306f3399afdcc2d942bf163e1877c46c",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Milk is the only allergen source and is recorded; tea, cardamom, saffron and sugar match the description."
+    },
+    "dish_015": {
+      "fingerprint": "c7e2c0fc2825d7d833bb860e9a97acb0bf9294a5a4b9810b772d6304b7e69ab7",
+      "criteria_passed": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "reviewer_notes": "Lemon, mint, sugar and ice; nothing implies an allergen."
+    }
+  }
+}

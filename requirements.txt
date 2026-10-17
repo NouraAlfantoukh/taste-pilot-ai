@@ -1,0 +1,7 @@
+# Pinned to the versions the offline suite and the real-service tests were run with.
+streamlit==1.66.0
+anthropic==1.15.0
+google-genai==2.31.0
+supabase==2.33.0
+python-dotenv==1.2.4
+pytest==9.1.1

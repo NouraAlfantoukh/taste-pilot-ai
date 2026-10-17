@@ -1,0 +1,4 @@
+# Optional development tools. The offline schema tests use pglast to check that the SQL migrations are valid
+# PostgreSQL; they are skipped when it is not installed.
+-r requirements.txt
+pglast

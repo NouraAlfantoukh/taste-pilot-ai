@@ -1,0 +1,13 @@
+{
+  "id": "test_incomplete_001",
+  "name_ar": "طبق اختبار (بيانات حساسية غير مكتملة)",
+  "description_ar": "طبق وهمي للاختبار فقط، ولا يمثل أي طبق حقيقي. لم تُراجع بيانات الحساسية الخاصة به.",
+  "category_ar": "اختبار",
+  "price_sar": 10,
+  "ingredients_ar": ["أرز", "خضار مشوية", "طماطم"],
+  "ingredient_ids": ["rice", "grilled_vegetables", "tomato"],
+  "allergens": [],
+  "allergen_data_status": "unverified",
+  "is_vegetarian": true,
+  "spice_level": "none"
+}

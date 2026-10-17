@@ -1,0 +1,574 @@
+{
+  "prompt_only": {
+    "overall": {
+      "runs": 104,
+      "runs_with_any_violation": 0,
+      "runs_with_allergy_violation": 0,
+      "runs_with_lower_risk_violation_only": 0,
+      "dishes_shown": 308,
+      "dishes_violating": 0,
+      "unreadable_outputs": 10,
+      "useful_runs": 93,
+      "possible_runs": 84,
+      "refused_although_possible": 1,
+      "impossible_runs": 20,
+      "correctly_empty_when_impossible": 20,
+      "runs_with_any_violation_ci95": [
+        0.0,
+        0.03562261687512055
+      ],
+      "runs_with_allergy_violation_ci95": [
+        0.0,
+        0.03562261687512055
+      ],
+      "dish_violation_rate": 0.0
+    },
+    "by_category": {
+      "adversarial": {
+        "runs": 18,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 49,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 17,
+        "possible_runs": 16,
+        "refused_although_possible": 1,
+        "impossible_runs": 2,
+        "correctly_empty_when_impossible": 2,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "allergy_category": {
+        "runs": 15,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 60,
+        "dishes_violating": 0,
+        "unreadable_outputs": 2,
+        "useful_runs": 13,
+        "possible_runs": 15,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.20388926630434784
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.20388926630434784
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "allergy_ingredient": {
+        "runs": 6,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 30,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 6,
+        "possible_runs": 6,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "budget": {
+        "runs": 6,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 25,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 6,
+        "possible_runs": 6,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "category": {
+        "runs": 4,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 12,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 4,
+        "possible_runs": 4,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.48990002040399916
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.48990002040399916
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "combined": {
+        "runs": 11,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 15,
+        "dishes_violating": 0,
+        "unreadable_outputs": 8,
+        "useful_runs": 3,
+        "possible_runs": 11,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          2.7755575615628914e-17,
+          0.2588400172488141
+        ],
+        "runs_with_allergy_violation_ci95": [
+          2.7755575615628914e-17,
+          0.2588400172488141
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "diet": {
+        "runs": 6,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 29,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 6,
+        "possible_runs": 6,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "dislike": {
+        "runs": 12,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 55,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 12,
+        "possible_runs": 12,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "impossible": {
+        "runs": 8,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 0,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 8,
+        "possible_runs": 0,
+        "refused_although_possible": 0,
+        "impossible_runs": 8,
+        "correctly_empty_when_impossible": 8,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "spice": {
+        "runs": 8,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 33,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 8,
+        "possible_runs": 8,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "unreviewed_data": {
+        "runs": 10,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 0,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 10,
+        "possible_runs": 0,
+        "refused_although_possible": 0,
+        "impossible_runs": 10,
+        "correctly_empty_when_impossible": 10,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.2775401687666166
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.2775401687666166
+        ],
+        "dish_violation_rate": 0.0
+      }
+    },
+    "errored_runs": 2,
+    "model_reason_claims": {
+      "reasons": 337,
+      "with_unsupported_claim": 112
+    },
+    "scenarios_with_violation": []
+  },
+  "pipeline": {
+    "overall": {
+      "runs": 106,
+      "runs_with_any_violation": 0,
+      "runs_with_allergy_violation": 0,
+      "runs_with_lower_risk_violation_only": 0,
+      "dishes_shown": 327,
+      "dishes_violating": 0,
+      "unreadable_outputs": 0,
+      "useful_runs": 106,
+      "possible_runs": 86,
+      "refused_although_possible": 0,
+      "impossible_runs": 20,
+      "correctly_empty_when_impossible": 20,
+      "runs_with_any_violation_ci95": [
+        0.0,
+        0.034973998922084165
+      ],
+      "runs_with_allergy_violation_ci95": [
+        0.0,
+        0.034973998922084165
+      ],
+      "dish_violation_rate": 0.0
+    },
+    "by_category": {
+      "adversarial": {
+        "runs": 18,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 45,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 18,
+        "possible_runs": 16,
+        "refused_although_possible": 0,
+        "impossible_runs": 2,
+        "correctly_empty_when_impossible": 2,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "allergy_category": {
+        "runs": 16,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 72,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 16,
+        "possible_runs": 16,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.19361341827271994
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.19361341827271994
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "allergy_ingredient": {
+        "runs": 6,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 22,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 6,
+        "possible_runs": 6,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "budget": {
+        "runs": 6,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 22,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 6,
+        "possible_runs": 6,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "category": {
+        "runs": 4,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 11,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 4,
+        "possible_runs": 4,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.48990002040399916
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.48990002040399916
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "combined": {
+        "runs": 12,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 52,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 12,
+        "possible_runs": 12,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "diet": {
+        "runs": 6,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 28,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 6,
+        "possible_runs": 6,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "dislike": {
+        "runs": 12,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 46,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 12,
+        "possible_runs": 12,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "impossible": {
+        "runs": 8,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 0,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 8,
+        "possible_runs": 0,
+        "refused_although_possible": 0,
+        "impossible_runs": 8,
+        "correctly_empty_when_impossible": 8,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "spice": {
+        "runs": 8,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 29,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 8,
+        "possible_runs": 8,
+        "refused_although_possible": 0,
+        "impossible_runs": 0,
+        "correctly_empty_when_impossible": 0,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.3244156195108769
+        ],
+        "dish_violation_rate": 0.0
+      },
+      "unreviewed_data": {
+        "runs": 10,
+        "runs_with_any_violation": 0,
+        "runs_with_allergy_violation": 0,
+        "runs_with_lower_risk_violation_only": 0,
+        "dishes_shown": 0,
+        "dishes_violating": 0,
+        "unreadable_outputs": 0,
+        "useful_runs": 10,
+        "possible_runs": 0,
+        "refused_although_possible": 0,
+        "impossible_runs": 10,
+        "correctly_empty_when_impossible": 10,
+        "runs_with_any_violation_ci95": [
+          0.0,
+          0.2775401687666166
+        ],
+        "runs_with_allergy_violation_ci95": [
+          0.0,
+          0.2775401687666166
+        ],
+        "dish_violation_rate": 0.0
+      }
+    },
+    "errored_runs": 0,
+    "model_reason_claims": {
+      "reasons": 327,
+      "with_unsupported_claim": 93
+    },
+    "scenarios_with_violation": []
+  }
+}
