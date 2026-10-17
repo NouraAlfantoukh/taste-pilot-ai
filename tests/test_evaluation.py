@@ -226,8 +226,9 @@ def test_the_pipeline_prompt_is_smaller_and_impossible_scenarios_need_no_call():
 
     for synthetic in (0, 45):
         sizes = fault_injection.prompt_sizes(synthetic)
-        assert sizes["pipeline_avg_chars_when_called"] < sizes["prompt_only_avg_chars"]
-        assert sizes["pipeline_scenarios_without_any_model_call"] == 10
+        assert sizes["pipeline_avg_chars_on_called_scenarios"] < sizes["prompt_only_avg_chars_on_called_scenarios"]
+        assert 0.40 < sizes["reduction_on_called_scenarios"] < 0.45
+        assert sizes["pipeline_scenarios_without_any_model_call"] == 10 and sizes["scenarios_where_the_pipeline_calls_the_model"] == 43
 
 
 def test_the_synthetic_menu_is_deterministic_consistent_and_keeps_impossible_scenarios_impossible():
@@ -260,3 +261,26 @@ def test_the_public_claim_detector_matches_what_the_guard_drops():
     for text in ("خالٍ من الحليب", "ولا تتضمن مكوناته أي فطر", "هذا الطبق آمن تمامًا"):
         assert has_unsupported_claim(text) and _clean_reason(text, []) == ""
     assert not has_unsupported_claim("طبق أرز وخضار خفيف يناسب من يفضّل الأكل المتوازن")
+
+
+def test_replaying_stored_pipeline_outputs_reproduces_the_dish_lists_and_displays_no_forbidden_claim():
+    from evaluation.core import replay_displayed_reasons
+
+    rows = []
+    for scenario in SCENARIOS:
+        raw_outputs = []
+
+        def generate(_system, user, store=raw_outputs):
+            reply = (
+                '{"picks": ['
+                + ",".join('{"dish_id": "%s", "reason_ar": "طبق لا يحتوي على الحليب وآمن تمامًا"}' % d for d in ALL_IDS[:4])
+                + "]}"
+            )
+            store.append(reply)
+            return reply
+
+        outcome = run_pipeline(scenario, generate)
+        rows.append({"arm": "pipeline", "scenario": scenario.id, "error": None, "model_calls": outcome.model_calls, "shown": outcome.shown, "raw": raw_outputs[-1] if raw_outputs else ""})
+    replay = replay_displayed_reasons(rows)
+    assert replay["dish_list_mismatches"] == 0 and replay["displayed_with_forbidden_claim"] == 0
+    assert replay["replayed_runs"] == sum(1 for r in rows if r["model_calls"]) == 43

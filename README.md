@@ -96,24 +96,25 @@ streamlit run app.py
 Secrets live in `.env` (local) or in the hosting platform's secrets, never in the repository.
 Apply `supabase/migrations/*.sql` to your Supabase project for persistence (details in [supabase/README.md](supabase/README.md)).
 
-## Deep Dive: prompt-only vs the deterministic pipeline
+## Deep Dive: constraining an LLM with deterministic code
 
-Full write-up with method, tables and limitations: [docs/DEEP_DIVE.md](docs/DEEP_DIVE.md). 53 fixed scenarios, a
-model-independent oracle, real calls to `claude-haiku-5-5` (about 550 calls in total), every raw output stored.
+Full write-up (method, denominators, tables, limitations, claims and what is *not* claimed): [docs/DEEP_DIVE.md](docs/DEEP_DIVE.md).
+53 fixed scenarios, a model-independent oracle, about 550 real calls to `claude-haiku-5-5`, every raw output stored and re-scored offline.
 
-| Measured on the real model | Prompt-only | Pipeline |
+| Evidence | Prompt-only | Pipeline |
 |---|---|---|
-| Constraint violations, 15-dish menu (159 runs) | 0 | 0 |
-| Constraint violations, 60-dish menu (104 / 106 runs) | 0 | 0 |
-| Useful answers, 15 / 60 dishes | 97% / 89% | 100% / 100% |
-| Model explanations with a claim the product forbids ("does not contain...") | 27-33%, shown | never shown |
-| Prompt size / model calls | 1.8x / 1.2x | 1x / 1x |
+| Constraint violations, 15 dishes (159 runs) **[measured]** | 0 | 0 |
+| Constraint violations, 60 dishes (104 / 106 runs) **[measured]** | 0 | 0 |
+| Useful answers, 15 / 60 dishes **[measured]** | 97.5% / 89.4% | 100% / 100% |
+| Model reasons containing an absence or safety claim the product forbids **[measured]** | 27% / 33%, shown to the guest | 0 of 440 displayed (replay) |
+| User-message size on the same scenarios **[measured, characters]** | 4,795 / 16,980 | 2,768 / 9,817 (-42%) |
+| Scenarios needing no recommendation call **[measured]** | 0 of 53 | 10 of 53 |
+| Scenarios with a violation if the model ignores every constraint **[simulated]** | 42 of 53 | 0 of 53 |
 
-The honest reading: a strong model with structured constraints did **not** violate any rule in 263 runs (upper bound
-about 1.4%), so the study does not claim the pipeline lowers the violation rate. The pipeline's guarantee is
-structural (it stays at zero violations even when the model is replaced by one that ignores every constraint, in an
-offline fault-injection simulation where the prompt-only design fails in 42 of 53 scenarios), and it is cheaper, avoids
-output truncation on long menus and never shows unsupported claims.
+Honest reading: a strong model with structured constraints did **not** violate any rule in 263 runs, so the study does not claim
+the pipeline lowered the real violation rate. It shows a structural guarantee that does not depend on model behaviour, shorter
+prompts, avoided calls, no truncation at 60 dishes (the baseline lost 10 of 104 answers; the cause is inferred, not proven) and
+explanations that cannot carry the model's unverified assurances. Characters are not tokens and no monetary cost was measured.
 
 ## Tests
 

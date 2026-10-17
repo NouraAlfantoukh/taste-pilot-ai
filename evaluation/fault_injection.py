@@ -54,30 +54,39 @@ def run(synthetic: int = 0) -> dict[str, dict[str, dict]]:
 
 
 def prompt_sizes(synthetic: int = 0) -> dict[str, float]:
-    """Average size (characters) of the text sent to the model per scenario, and how many scenarios need no model call.
+    """Size of the user message sent to the model, measured on what each system really sends (characters, not tokens).
 
-    Both systems are measured on the same scenarios; the pipeline's prompt lists only the dishes that survived filtering.
+    Like for like: the reduction compares the two systems on the scenarios where the pipeline makes a model call. The
+    system prompt (identical in both systems, 1,098 characters) is excluded. Scenarios where nothing qualifies send
+    nothing in the pipeline; they are reported separately as avoided calls, not folded into the size reduction.
     """
-    from agent.orchestrator import constraint_labels_ar
-    from agent.prompts import build_menu_context
-    from evaluation.core import prompt_only_message
-    from services.recommendation_service import recommend
+    from evaluation.core import prompt_only_message, run_pipeline
 
-    baseline, pipeline, no_call = [], [], 0
+    baseline_all, baseline_called, pipeline_called = [], [], []
     for scenario in SCENARIOS:
         menu = scenario_menu(scenario, synthetic)
-        baseline.append(len(prompt_only_message(scenario, menu)))
-        eligible = recommend(menu, scenario.constraints).eligible
-        if not eligible:
-            no_call += 1
-            continue
-        applied = constraint_labels_ar(scenario.constraints)
-        pipeline.append(len(build_menu_context(eligible)) + len(scenario.request_ar) + sum(len(x) for x in applied))
+        baseline = len(prompt_only_message(scenario, menu))
+        baseline_all.append(baseline)
+        sent: list[int] = []
+
+        def capture(_system: str, user: str, sent=sent) -> str:
+            sent.append(len(user))
+            return '{"picks": []}'
+
+        run_pipeline(scenario, capture, synthetic)
+        if sent:
+            baseline_called.append(baseline)
+            pipeline_called.append(sent[0])
+    called = len(pipeline_called)
+    mean = lambda xs: sum(xs) / len(xs)  # noqa: E731
     return {
         "scenarios": len(SCENARIOS),
-        "prompt_only_avg_chars": sum(baseline) / len(baseline),
-        "pipeline_avg_chars_when_called": sum(pipeline) / len(pipeline),
-        "pipeline_scenarios_without_any_model_call": no_call,
+        "scenarios_where_the_pipeline_calls_the_model": called,
+        "pipeline_scenarios_without_any_model_call": len(SCENARIOS) - called,
+        "prompt_only_avg_chars_all_scenarios": mean(baseline_all),
+        "prompt_only_avg_chars_on_called_scenarios": mean(baseline_called),
+        "pipeline_avg_chars_on_called_scenarios": mean(pipeline_called),
+        "reduction_on_called_scenarios": 1 - mean(pipeline_called) / mean(baseline_called),
     }
 
 

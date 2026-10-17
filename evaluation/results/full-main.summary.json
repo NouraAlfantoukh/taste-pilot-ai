@@ -283,6 +283,7 @@
       "reasons": 489,
       "with_unsupported_claim": 131
     },
+    "displayed_replay": null,
     "scenarios_with_violation": []
   },
   "pipeline": {
@@ -568,6 +569,12 @@
     "model_reason_claims": {
       "reasons": 461,
       "with_unsupported_claim": 118
+    },
+    "displayed_replay": {
+      "replayed_runs": 129,
+      "displayed_reasons": 224,
+      "displayed_with_forbidden_claim": 0,
+      "dish_list_mismatches": 0
     },
     "scenarios_with_violation": []
   }

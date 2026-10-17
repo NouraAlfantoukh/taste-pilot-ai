@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from evaluation.core import ARMS, Outcome, claim_stats, score_run, summarize
+from evaluation.core import ARMS, Outcome, claim_stats, replay_displayed_reasons, score_run, summarize
 from evaluation.scenarios import SCENARIOS, VALIDATION_IDS, Scenario, by_id
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
@@ -100,6 +100,7 @@ def score_results(rows: list[dict]) -> dict:
             "by_category": {c: summarize([i for i in items if i["category"] == c]) for c in categories},
             "errored_runs": errored.get(arm, 0),
             "model_reason_claims": claim_stats(raw_by_arm.get(arm, [])),
+            "displayed_replay": replay_displayed_reasons([r for r in rows if r["arm"] == arm]) if arm == "pipeline" else None,
             "scenarios_with_violation": sorted({i["scenario"] for i in items if i["any_violation"]}),
         }
     return report
@@ -137,11 +138,17 @@ def markdown(report: dict, rows: list[dict]) -> str:
         "| Model reasons containing a claim the guard forbids (\"does not contain...\", \"safe\") | "
         + " | ".join(
             f"{report[a]['model_reason_claims']['with_unsupported_claim']} of {report[a]['model_reason_claims']['reasons']}"
-            + (" (shown to the guest)" if a == "prompt_only" else " (discarded, never shown)")
+            + (" (shown to the guest)" if a == "prompt_only" else " (model text discarded, see replay below)")
             for a in arms
         )
         + " |"
     )
+    replay = report.get("pipeline", {}).get("displayed_replay")
+    if replay:
+        lines.append(
+            f"| Reasons actually displayed by the pipeline (offline replay of the stored outputs) | n/a | {replay['displayed_reasons']} displayed, "
+            f"{replay['displayed_with_forbidden_claim']} with a forbidden claim; {replay['dish_list_mismatches']} dish-list mismatches in {replay['replayed_runs']} replays |"
+        )
     lines += ["", "**Per category** (runs with a violation / runs; allergy violations in brackets):", "",
               "| Category | " + " | ".join(arms) + " |", "|---|" + "---|" * len(arms)]
     categories = sorted({c for a in arms for c in report[a]["by_category"]})

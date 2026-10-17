@@ -190,6 +190,37 @@ def claim_stats(raw_outputs: list[str]) -> dict[str, int]:
     return {"reasons": len(reasons), "with_unsupported_claim": flagged}
 
 
+def replay_displayed_reasons(rows: list[dict]) -> dict[str, int]:
+    """Replay the stored PIPELINE outputs through the production guard and count what a guest would actually be shown.
+
+    No model call: the stored raw picks are fed to `compose_reply`'s rendering step. Returns the number of displayed
+    reasons and how many of them contain a claim the guard forbids (the production design expects 0), plus the number
+    of runs whose replayed dish list differs from the stored one (expected 0).
+    """
+    from agent.explain import dish_reason_ar
+    from agent.guard import has_unsupported_claim, render_recommendations
+    from evaluation.scenarios import by_id
+
+    scenarios = by_id()
+    shown_reasons = flagged = replay_mismatch = replayed = 0
+    for row in rows:
+        if row["arm"] != "pipeline" or row.get("error") or not row["model_calls"]:
+            continue
+        scenario = scenarios[row["scenario"]]
+        menu = scenario_menu(scenario, row.get("synthetic_dishes", 0))
+        eligible = recommend(menu, scenario.constraints).eligible
+        rendered = render_recommendations(
+            eligible, row["raw"], menu, None, lambda dish: dish_reason_ar(dish, scenario.constraints)
+        )
+        replayed += 1
+        replay_mismatch += [d["id"] for d in rendered.dishes] != row["shown"]
+        for reason in rendered.reasons:
+            if reason:
+                shown_reasons += 1
+                flagged += has_unsupported_claim(reason)
+    return {"replayed_runs": replayed, "displayed_reasons": shown_reasons, "displayed_with_forbidden_claim": flagged, "dish_list_mismatches": replay_mismatch}
+
+
 ARMS = {"prompt_only": run_prompt_only, "pipeline": run_pipeline}
 
 

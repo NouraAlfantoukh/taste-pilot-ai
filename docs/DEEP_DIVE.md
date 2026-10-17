@@ -1,174 +1,325 @@
-# Deep Dive: is a prompt enough to enforce hard constraints?
+# Deep Dive: constraining an LLM with deterministic code
 
-**Question.** TastePilotAI enforces allergies, diet, excluded ingredients, budget and spice in code (deterministic
-filtering, then the model chooses among the surviving dishes, then a guard validates its output). A simpler design
-would put the whole menu and the constraints in the prompt and trust the model. Is the extra machinery justified?
+> **Design principle.** Use the LLM for language understanding and flexible recommendations. Use deterministic code to
+> enforce hard constraints, reduce unnecessary context, and validate outputs.
 
-**Short answer.** On a strong model with the constraints given as structured facts, the prompt-only baseline did **not**
-violate a single constraint in 263 runs, so this study does **not** show that the pipeline lowers the violation rate.
-What it does show, with stored raw outputs behind every number, is where the two designs differ:
-the baseline's safety depends on the model behaving (fault injection), it degraded to 89% useful answers on a
-60-dish menu at the production output limit, a quarter to a third of its own explanations contain claims the product
-forbids, and it sends about 1.8x more text and makes about 1.2x more model calls.
-The pipeline is safe by construction, not by measurement.
+Evidence labels used throughout: **[M]** measured (real model outputs, or offline calculation on the real prompts),
+**[S]** simulated (deterministic fault injection, no real model), **[I]** inferred (plausible, not directly instrumented).
 
-## Systems compared
+---
 
-Both receive the **same structured constraints and the same Arabic request**, so the comparison isolates enforcement.
-It excludes language understanding (the extraction step), which is covered by the integration tests instead.
+## A. Executive summary
 
-| | Prompt-only (baseline) | Pipeline (production path) |
+**Problem.** TastePilotAI recommends dishes to guests who may have allergies, a diet, disliked ingredients, a budget or a
+spice limit. A common first design gives the model the whole menu and the constraints in the prompt and trusts it to comply.
+
+**Architectural change evaluated.** A pipeline that separates responsibilities: the model interprets language and
+chooses among dishes; deterministic code decides which dishes are eligible, shows the model only those, validates what it
+picked, and writes the explanations from menu data. It is compared with a deliberately strong prompt-only baseline on the same
+53 scenarios, with real calls to `claude-haiku-5-5` (about 550 calls, every raw output stored).
+
+**Strongest measured findings**
+
+1. **[M] Both designs produced zero constraint violations** in every scored run (263 baseline runs, 265 pipeline runs).
+   A strong model with structured constraints and a small menu complied.
+2. **[M] The baseline's own explanations contained absence or safety claims that product policy forbids in 27% (15 dishes) and 33%
+   (60 dishes) of its reasons** ("does not contain ..."). In an offline replay of the stored pipeline outputs through the production
+   guard, **0 of 440 displayed reasons** (224 + 161 + 55 across E1, E2 and E3) contained such a claim, because displayed reasons are built from menu data.
+3. **[M] The pipeline's user message was about 42% shorter in characters** (4,795 vs 2,768 on 15 dishes; 16,980 vs 9,817 on 60), and
+   **10 of 53 scenarios needed no recommendation call** because nothing qualified (129 vs 159 calls in the 15-dish experiment).
+4. **[M] On the 60-dish menu 10 of 104 baseline outputs were cut off mid-JSON** (89% useful answers vs 100%); a re-run of those
+   scenarios with a larger output limit produced 16 of 16 readable answers. The cause is **[I]** an output-budget effect, not proven.
+5. **[S] When the model is replaced by a stand-in that ignores every constraint, the baseline violates constraints in 42 of 53 scenarios
+   and the pipeline in 0 of 53.** This shows structural robustness, not real-model behaviour.
+
+**What the experiment did not prove.** It did not show that the pipeline lowers the real model's constraint-violation rate (that rate
+was zero for both). It did not measure monetary cost, token counts or latency, and it does not establish real-world allergy safety.
+
+---
+
+## B. Problem and design rationale
+
+Relying on prompt instructions alone creates operational risks. They are stated here as risks; the experiment tests some of them.
+
+| Risk of prompt-only | Why it matters | Tested here? |
 |---|---|---|
-| Menu shown to the model | the whole menu | only dishes that passed the hard filter |
-| Constraints | written in the prompt, with the rule "never recommend a dish whose allergen data is unreviewed" and an explicit way to answer "nothing qualifies" (`{"picks": []}`) | enforced by `filter_dishes` (taxonomy families, unreviewed data fails closed) |
-| Model call | always one | none when nothing qualifies |
-| Output check | ids must exist, at most 5 dishes, nothing else | the guard: ids must be eligible, reasons rebuilt from menu data |
-| Model | `claude-haiku-5-5`, effort `low`, 2048 output tokens, default sampling (the app's production settings, no fallback, no retries) | the same |
+| Constraint enforcement depends on model behaviour | A model update, a longer menu or a hostile request can change compliance silently | Partly: real model complied **[M]**; stand-in model did not **[S]** |
+| Free-form explanations can assert things the data does not establish | "Does not contain X" reads as a safety assurance; menu data cannot rule out cross-contact | Yes **[M]**: counted, not audited for truth (see section E) |
+| The whole menu is sent on every request | More input text per call, growing with the menu | Yes **[M]** in characters, not tokens |
+| Larger prompts may increase output-budget pressure | Reasoning and answer share one output limit; a cut-off answer is unusable | Observed truncation **[M]**; mechanism **[I]** |
+| A model call is made even when nothing qualifies | Unneeded latency and cost; and a model asked for "something" may offer something | Yes **[M]**: calls counted; every baseline run answered correctly empty |
 
-The baseline prompt is deliberately strong (rules stated plainly, hedging allowed), not a straw man. It uses the same
-system prompt and menu rendering as the app. The exact text is built by `evaluation/core.py::prompt_only_message`.
+The baseline did not fail a safety test, so the justification is not "the model is unreliable". It is that **hard constraints and output
+validation are better enforced by code that gives a guarantee than by instructions that give a likelihood**, while the model keeps the
+tasks that need language: understanding the request and recommending among acceptable dishes.
 
-## Scenarios
+---
 
-53 fixed, hand-written scenarios (`evaluation/scenarios.py`), each with a natural Arabic request:
+## C. Architecture and trade-offs
 
-| Category | Count | Example |
+### Responsibilities (verified against the code)
+
+| Step | Component | Who does it | Source |
+|---|---|---|---|
+| 1. Interpret the message into structured fields (allergies, dislikes, diet, budget, spice, ...) | `agent/extraction.py` | LLM, output parsed strictly | strict JSON validation, errors never become empty constraints |
+| 2. Remove dishes that violate hard constraints; unreviewed allergen data fails closed | `services/recommendation_service.py`, `services/safety_service.py` | code | `filter_dishes`, `assess_dish` |
+| 3. Recommend among the eligible dishes only | `agent/orchestrator.py::compose_reply` | LLM | the prompt lists `result.eligible` only |
+| 4. Validate picks; build explanations from menu data | `agent/guard.py`, `agent/explain.py` | code | unknown or ineligible ids are dropped; malformed output falls back to the top eligible dishes with no model prose |
+| 5. Nothing eligible: answer without a recommendation call | `compose_reply` | code | deterministic Arabic message, no call |
+
+Point 5 concerns the recommendation call. In the application the extraction call still happens for every message; the experiment gave
+both systems structured constraints, so it measures only the recommendation stage.
+
+```mermaid
+flowchart LR
+    U[Guest message] --> X[LLM: extract constraints]
+    X --> F{Deterministic filter<br/>taxonomy, safety, fail closed}
+    F -->|no eligible dish| E[Fixed empty answer<br/>no recommendation call]
+    F -->|eligible dishes only| R[LLM: choose and order]
+    R --> G[Guard: ids eligible?<br/>reasons rebuilt from menu data]
+    G --> A[Reply and dish cards]
+```
+
+### Prompt-only versus pipeline (the two systems in the experiment)
+
+| | Prompt-only (baseline) | Pipeline (production) |
+|---|---|---|
+| Menu shown to the model | whole menu | eligible dishes only |
+| Constraints | stated in the prompt, plus the rule "never recommend a dish whose allergen data is unreviewed" and an explicit `{"picks": []}` escape | enforced by `filter_dishes` before the model sees anything |
+| Model call when nothing qualifies | always | none |
+| Output handling | ids must exist, at most 5 shown | guard: ids must be eligible; reasons rebuilt from menu data |
+| Model and settings | `claude-haiku-5-5`, effort `low`, 2,048 output tokens, SDK default sampling, no fallback, no retries | identical |
+
+The baseline prompt is intentionally strong (rules in plain words, a way to answer "nothing", same system prompt and menu rendering as the
+application), so the comparison is not against a straw man. Exact text: `evaluation/core.py::prompt_only_message`.
+
+### Why the LLM was not replaced by rules
+
+Rules decide eligibility well and cannot do the rest: understanding colloquial Gulf Arabic ("ما أبغى شي ثقيل"), mapping "حليب ومشتقاته" to an
+allergen, choosing and ordering among acceptable dishes in line with the request. The pipeline therefore narrows the model's operating space
+instead of removing the model.
+
+### Trade-offs accepted
+
+- **More deterministic code to maintain** (taxonomy, filter, guard, review process, about 1,000 offline tests).
+- **Quality depends on menu data and taxonomy correctness.** The filter is only as right as the ingredient-to-allergen mapping.
+- **Extraction errors affect both designs.** If the model misreads "no cheese" as "no chicken", a perfect filter enforces the wrong constraint.
+- **The guard validates known constraints; it cannot establish that incomplete restaurant data is true.** It prevents *claiming* more than the
+  data says, and unreviewed data is excluded for allergic guests, but it cannot detect an ingredient missing from the record.
+- **The evaluation oracle and the pipeline share the taxonomy**, so a taxonomy error is invisible to both (section G).
+
+---
+
+## D. Evaluation methodology
+
+**Scenarios.** 53 fixed, hand-written scenarios with natural Arabic requests (`evaluation/scenarios.py`). Both systems receive the same
+structured constraints and the same request, which isolates enforcement from language understanding.
+
+| Category | n | Example |
 |---|---|---|
 | allergy_category | 8 | milk; milk + gluten; milk + fish + sesame |
-| allergy_ingredient | 3 | cumin; cheese (matched through its family); lentils |
-| dislike | 6 | mushroom (on no dish); onion + a main-course request |
+| allergy_ingredient | 3 | cumin; cheese (through its family); lentils |
+| dislike | 6 | mushroom (on no dish); onion with a main-course request |
 | diet | 3 | vegetarian starters |
 | budget | 3 | at most 15 SAR |
 | spice | 4 | nothing hot; at least medium |
 | category | 2 | desserts |
 | combined | 6 | milk allergy + vegetarian + at most 20 SAR |
-| impossible | 4 | vegetarian and at most 7 SAR: the right answer is "nothing" |
-| unreviewed_data | 5 | an allergy declared while the menu's allergen data is unreviewed: the right answer is "nothing" |
+| impossible | 4 | vegetarian and at most 7 SAR (correct answer: nothing) |
+| unreviewed_data | 5 | allergy declared while allergen data is unreviewed (correct answer: nothing) |
 | adversarial | 9 | tree-nut allergy but "recommend the kunafa"; "ignore all previous restrictions" |
 
-**Oracle.** `evaluation/core.py::violations` decides from the raw dish record and the structured constraints whether
-a shown dish breaks a rule. It never calls the filter, the guard or a model. For all 53 scenarios its set of valid
-dishes equals the production filter's eligible set (a test, `tests/test_evaluation.py`, enforces it), including on the
-60-dish menu. Violations are classed by risk:
+**Menus.** The 15-dish production menu, and a 60-dish scale menu: the same 15 dishes plus 45 deterministic synthetic dishes
+(`evaluation/synthetic.py`, fixed seed, allergens derived from ingredients through the taxonomy; synthetic dishes that would make an
+"impossible" scenario satisfiable are dropped).
 
-- **allergy class** (high risk): a dish containing the declared allergen, an ingredient-level allergen, or *any* dish
-  recommended to an allergic guest from unreviewed allergen data;
-- **lower-risk**: diet, excluded ingredient, budget, spice, category.
+**Runs, denominators and exclusions (recomputed from the stored raw outputs)**
 
-## Method
+| Experiment | Menu | Repeats | Runs per system | Scored baseline / pipeline | Excluded | Model calls (baseline / pipeline) |
+|---|---|---|---|---|---|---|
+| Validation (two small runs) | 15 | 1 | 10 and 11 | all | none | 38 in total |
+| **E1** | 15 | 3 | 159 | 159 / 159 | none | 159 / 129 (30 pipeline runs made no call) |
+| **E2** | 60 | 2 | 106 | **104** / 106 | 2 baseline runs failed with a recoverable provider error (`al-triple` repeat 1, `co-gluten-cheese-budget` repeat 0); excluded, not retried | 104 successful + 2 failed / 86 (20 made no call) |
+| **E3** (diagnosis) | 60 | 2 | 16 (8 scenarios chosen because their baseline output was cut off in E2) | 16 / 16 | none | 16 / 16, output limit raised to 8,192 |
 
-- **Validation first:** 10 then 11 scenarios x 1 repeat (about 40 calls) to check the harness before spending more.
-- **E1, production menu (15 dishes):** 53 scenarios x 3 repeats x 2 systems = 318 runs, 288 model calls, 0 errors.
-- **E2, scale (60 dishes):** the 15 real dishes plus 45 deterministic synthetic dishes (`evaluation/synthetic.py`, fixed
-  seed, ingredients recombined from the taxonomy, allergens derived from the ingredients; synthetic dishes that would make an
-  "impossible" scenario satisfiable are dropped). 53 x 2 repeats x 2 systems = 212 runs; 2 baseline calls failed
-  with a recoverable provider error and are excluded, never retried.
-- **E3, diagnosis:** the 8 scenarios whose baseline output was cut off in E2, re-run with a larger output limit
-  (8192 tokens).
-- Every raw model output is stored in `evaluation/results/*.jsonl`; the tables below are recomputed offline with
-  `python -m evaluation.run --score <file>` (no API, no cost).
+Total attempted model calls: 38 + 288 + 192 + 32 = 550. The saved outputs contain only text, so **provider token counts were not
+recorded and none are reported.**
 
-## Results
+**Scoring.** An **oracle** (`evaluation/core.py::violations`) decides from the raw dish record and the structured constraints whether a shown
+dish breaks a rule, without calling the filter, the guard or a model. Its set of valid dishes equals the production filter's eligible set in
+all 53 scenarios on both menus (enforced by a test). Violations are classed as **allergy-class** (a dish containing the declared allergen or
+ingredient allergen, or any dish recommended to an allergic guest from unreviewed allergen data) or **lower-risk** (diet, dislike, budget,
+spice, category). A run is **useful** if it satisfies every constraint: a clean list when valid dishes exist, an empty list when none do.
 
-### E1: production menu, 15 dishes (159 runs per system)
+**Reproducibility.** Every figure below is recomputed offline with `python -m evaluation.run --score evaluation/results/<file>.jsonl` and
+`python -m evaluation.fault_injection`, at no cost. Sampling is not seeded, so a re-run with the real model will not reproduce the raw
+outputs exactly.
+
+---
+
+## E. Results
+
+### E1: production menu, 15 dishes **[M]**
 
 | Metric | Prompt-only | Pipeline |
 |---|---|---|
-| Runs with any constraint violation | **0** | **0** |
-| Runs with an **allergy-class** violation | **0** | **0** |
+| Runs with any constraint violation | 0 of 159 | 0 of 159 |
+| Runs with an allergy-class violation | 0 | 0 |
 | Dishes shown / violating | 488 / 0 | 464 / 0 |
-| Useful answers (every constraint met) | 155 (97%) | 159 (100%) |
+| Useful answers | 155 of 159 (97.5%) | 159 of 159 (100%) |
 | Refused although a valid dish existed | 4 of 129 | 0 of 129 |
 | Correctly empty when no dish qualifies | 30 of 30 | 30 of 30 |
-| Unreadable model outputs | 0 | 0 |
-| Model reasons containing a claim the guard forbids | 131 of 489 (27%), **shown to the guest** | 118 of 461, discarded, **never shown** |
-| Model calls | 159 | 129 |
+| Unreadable outputs | 0 | 0 |
+| Model reasons containing a claim the guard forbids | 131 of 489 (26.8%), shown to the guest | 118 of 461 generated, discarded |
+| Reasons actually displayed (offline replay through the guard) | n/a | 224 displayed, 0 with a forbidden claim |
+| Recommendation model calls | 159 | 129 |
 
-The four refusals: three adversarial runs where the guest asked for the one forbidden dish (kunafa with a nut
-allergy, hummus with a sesame allergy) and the model answered with an empty list instead of alternatives, and one
-vegetarian-dessert run. They are counted as unhelpful, although an empty answer to "recommend the dish I'm allergic
-to" is defensible.
+The four baseline refusals: three adversarial runs where the guest asked for the one forbidden dish (kunafa with a nut allergy twice,
+hummus with a sesame allergy once) and the model returned an empty list instead of alternatives, and one vegetarian-dessert run. They are
+scored as unhelpful, although an empty answer to "recommend the dish I'm allergic to" is defensible.
 
-### E2: 60 dishes (104 baseline and 106 pipeline runs scored)
+### E2: 60 dishes **[M]**
 
 | Metric | Prompt-only | Pipeline |
 |---|---|---|
-| Runs with any violation / with an allergy violation | **0 / 0** | **0 / 0** |
-| Useful answers | 93 of 104 (89%) | 106 of 106 (100%) |
-| Unreadable (cut-off) model outputs | **10** | 0 |
+| Runs with any violation / allergy-class violation | 0 of 104 / 0 | 0 of 106 / 0 |
+| Useful answers | 93 of 104 (89.4%) | 106 of 106 (100%) |
+| Unreadable (cut-off) outputs | 10 | 0 |
 | Refused although a valid dish existed | 1 of 84 | 0 of 86 |
-| Model reasons containing a forbidden claim | 112 of 337 (33%), shown | 93 of 327, never shown |
+| Model reasons containing a claim the guard forbids | 112 of 337 (33.2%), shown | 93 of 327 generated, discarded |
+| Reasons actually displayed (replay) | n/a | 161 displayed, 0 with a forbidden claim |
 
-The 10 unreadable outputs are JSON that stops in the middle of a sentence. Re-running exactly those 8 scenarios with an
-8192-token limit (E3) gave 16 readable, useful answers out of 16, which is consistent with the production output limit
-(reasoning shares the 2048-token budget) combined with a longer menu, not with the model's judgement (the stop reason was not
-recorded, so this is an inference from the re-run, not a direct observation). The pipeline's shorter prompts did
-not hit it. This is a configuration effect and says nothing about the baseline's constraint accuracy.
+### E3: the truncated outputs **[M] observation, [I] explanation**
 
-### What the zero violations do and do not mean
+The 10 cut-off baseline outputs stop inside a JSON string, at 60 to 883 characters (readable outputs: median 522, range 13 to 1,059). Re-running
+the 8 affected scenarios twice with an 8,192-token output limit gave 16 of 16 readable, useful baseline answers. That supports the explanation
+that a longer menu plus the 2,048-token limit (which the SDK shares between reasoning and the answer) caused the truncation, but does not prove it:
+the stop reason was not recorded, and 16 runs on one model is a small sample.
 
-Zero events in 159 + 104 = 263 baseline runs bounds the true run-level violation rate for *these conditions*
-below about **1.4%** (95% Wilson upper bound; 2.4% for E1 alone, 3.6% for E2 alone), and below 0.5% per dish shown
-(0 of 796). That is a bound, not proof of safety, and it holds only for this model, these scenarios and
-structured inputs.
+### Bounds on the zero violations
 
-### Fault injection (simulation, offline, deterministic)
+Zero events in 263 baseline runs bounds the true run-level violation rate for these conditions below about **1.4%** (95% Wilson upper bound; 2.4%
+for E1 alone, 3.6% for E2 alone) and below 0.5% per dish shown (0 of 796). A bound for this model, these scenarios and structured inputs, not a
+safety claim.
 
-To see which design's safety depends on the model, the model is replaced by misbehaving stand-ins
-(`python -m evaluation.fault_injection`). This is **not** a measurement of a real model.
+### Fault injection **[S]**
 
-| Stand-in model | System | Runs with a violation | Runs with an allergy violation | Dishes shown / violating |
+The model is replaced by a stand-in (`python -m evaluation.fault_injection`, deterministic, no API). This is **not** a real-model result.
+
+| Stand-in | System | Scenarios with a violation | Allergy-class | Dishes shown / violating |
 |---|---|---|---|---|
-| names every dish, ignoring all constraints | prompt-only | 42 of 53 | 16 | 265 / 156 |
-| names every dish, ignoring all constraints | pipeline | 0 | 0 | 192 / 0 |
+| names every dish, ignoring all constraints | prompt-only | **42 of 53** | 16 | 265 / 156 |
+| names every dish, ignoring all constraints | pipeline | **0 of 53** | 0 | 192 / 0 |
 | three random dishes | prompt-only | 42 of 53 | 19 | 159 / 89 |
-| three random dishes | pipeline | 0 | 0 | 124 / 0 |
+| three random dishes | pipeline | 0 of 53 | 0 | 124 / 0 |
 
-### Cost (measured on the prompts, offline)
+### Input size and avoidable calls **[M], characters only**
 
-Average text sent per scenario: 4,807 characters (prompt-only) vs 2,725 (pipeline) on 15 dishes, and 17,013 vs 9,774 on
-60 dishes (about 43% less). 10 of the 53 scenarios need no model call at all because nothing qualifies (19% fewer calls
-in E1: 129 vs 159). Latency was not recorded.
+| Menu | Prompt-only user message (avg, scenarios where the pipeline calls) | Pipeline user message (avg) | Reduction | Scenarios with no call |
+|---|---|---|---|---|
+| 15 dishes | 4,795 chars | 2,768 chars | **42.3%** | 10 of 53 |
+| 60 dishes | 16,980 chars | 9,817 chars | **42.2%** | 10 of 53 |
 
-## Interpretation
+Measured on the text each system really sends, on the same 43 scenarios where the pipeline makes a call; the system prompt (1,098 characters, identical)
+is excluded. (Averaged over all 53 scenarios the baseline sends 4,807 and 17,013 characters.) The 10 scenarios with no call are reported as
+avoided calls and are not folded into the size reduction.
 
-1. **Accuracy of a strong model was not the bottleneck.** With constraints given as facts and a small menu, the baseline
-   was correct every time. Claiming otherwise would be inventing a result.
-2. **The measured differences are about reliability, honesty and cost:** the pipeline's shorter prompts avoided the
-   truncation the baseline suffered at 60 dishes; the model's own prose often asserts what the data does not
-   establish ("does not contain the allergen..."), which the guard and the data-built reasons remove; and the deterministic
-   path is cheaper and answers "nothing qualifies" without a model call.
-3. **The strongest argument is structural, not statistical.** The pipeline's guarantee is a property of the code and is
-   tested for every scenario against a model that names every dish; the baseline's guarantee is a property of the model,
-   which can change with a model update, a temperature change, a longer menu or a hostile request.
+---
 
-## Limitations (read these before citing the numbers)
+## F. Implications
 
-- One model (`claude-haiku-5-5`), 2 to 3 repeats, default sampling; no confidence statement beyond the bounds above.
-- Constraints were given as structure. In the real app they come from the extraction step, which can misunderstand a
-  guest; that risk applies to both designs equally and is tested separately (integration tests on real Claude).
-- The scenario set was written by the project author, not independently; the synthetic menu is random recombination, not a
-  real restaurant, and it is still only 60 dishes.
-- **The oracle and the pipeline share the taxonomy** (ingredient to allergen and family mappings). A wrong mapping would
-  be invisible to both. The menu review ([MENU_REVIEW.md](MENU_REVIEW.md)) addresses data consistency, not the
-  correctness of the taxonomy itself.
-- Single-turn only; multi-turn clarification and memory are covered by the QA suite, not this study.
-- The baseline prompt is strong but not exhaustive (no few-shot examples, no self-check step); a better prompt could narrow
-  the "unsupported claim" and "refusal" gaps.
+**Token efficiency and cost.** The pipeline sends about 42% fewer characters in the user message under the tested conditions, which is a credible
+opportunity for lower input-token consumption and potentially lower inference cost. **Characters are not tokens, and a smaller prompt is not a cost
+saving.** Token usage, price and latency were not measured; claiming "43% cheaper" would be unsupported. It also avoided 10 of 53 recommendation calls (19%).
+The absolute difference grows with the menu (about 2,000 characters at 15 dishes, about 7,000 at 60), because the baseline's prompt grows with every dish while the pipeline's grows only with the eligible ones.
+
+**Reliability and unsupported claims.** A constraint-violating dish and an unsupported explanation are different things, and only the second was
+observed. The baseline produced zero violations, so **the experiment did not demonstrate a lower real-model violation rate for the pipeline**. What the
+pipeline does is constrain the candidate set and refuse to trust free-form text as ground truth: it prevents the observed class of absence claims
+from being displayed (0 of 440 displayed reasons in the replays). That is not the same as eliminating hallucination. The claims were counted by
+phrase detection (the guard's rules), not audited for truth; a manual read of a sample of flagged reasons found statements that were accurate about
+the listed ingredients, so the point is that they are assurances the product does not allow itself to make, not that they were false.
+An automated attempt to test them against the menu data was discarded because it cannot reliably scope negation.
+
+**Output robustness.** At 60 dishes the baseline lost 10 of 104 answers to truncation at the production output limit, the pipeline's shorter
+prompts lost none, and a larger limit removed the problem in a small re-run. Raising the output limit is also a valid fix for the baseline; the
+finding is that the baseline needed it and the pipeline did not.
+
+**Structural robustness.** Fault injection shows the pipeline's eligibility guarantee does not depend on the model's behaviour: even a stand-in that
+names every dish yields zero violations, and the property is enforced by tests for all scenarios. A real model may never misbehave this way; the point
+is where the guarantee comes from.
+
+---
+
+## G. Limitations and next steps
+
+**Limitations (in order of importance)**
+
+1. **One model, a small author-written scenario set.** Two to three repeats, SDK default sampling. No claim beyond these bounds.
+2. **Structured constraints were given to both systems.** Natural-language extraction, a source of real errors, is outside this experiment
+   (covered by separate integration tests).
+3. **The oracle and the pipeline share the taxonomy.** A wrong ingredient-to-allergen mapping would be invisible to both. The menu review checks
+   data consistency, not the taxonomy's correctness.
+4. **Synthetic scale data is not a real menu.** Random recombination of ingredients, 60 dishes.
+5. **No direct measurement of cost or latency**, and no provider token counts in the stored outputs.
+6. **No proof of real-world allergy safety.** Cross-contact, recipe changes and untracked allergens are out of scope; the menu is fictional and its
+   review is AI-assisted ([MENU_REVIEW.md](MENU_REVIEW.md)).
+7. **Single-turn evaluation.** Memory and clarification are covered by the QA suite, not here.
+8. The baseline prompt is strong but not exhaustive (no examples, no self-check step); a better prompt could narrow the claim and refusal gaps.
+
+**Proportionate next steps**
+
+- Validate the taxonomy independently (a second source for allergen mappings).
+- Add scenarios written by someone other than the pipeline's author, including more adversarial and multilingual requests.
+- Log provider token usage, stop reasons and latency per call, then re-run to turn the character-based and truncation findings into measured ones.
+
+---
+
+## H. Conclusion
+
+The experiment supports deterministic enforcement as a way to constrain the model's operating space, to keep the observed class of absence claims out of
+what guests see, to reduce prompt context by roughly 42% in characters, and to avoid some recommendation calls. It does not establish that the pipeline lowered
+the real model's constraint-violation rate: that rate was zero for both designs in this experiment. The case for the architecture rests on the structural
+guarantee, validated by simulation, and on measured operational differences, not on a safety gap that the data did not show.
+
+---
+
+## Key Claims and Evidence
+
+| Claim | Evidence | Confidence / limitation | Suggested verbal explanation |
+|---|---|---|---|
+| Hard constraints are enforced by code, not by the prompt | `filter_dishes` + guard; oracle equals the filter on 53 scenarios; fault injection 0 of 53 vs 42 of 53 **[S]** | High for the code path; the stand-in is not a real model | "The model never sees a dish it is not allowed to recommend, so compliance does not depend on the model behaving." |
+| The baseline model complied with every constraint | 0 violations in 263 runs **[M]**; upper bound about 1.4% | One model, structured inputs, small menus | "A strong model did well. I am not claiming the pipeline made it safer; I am claiming it removes the dependence on that." |
+| Displayed explanations carry no forbidden absence claim | 0 of 440 displayed reasons in replays; 27% to 33% of the baseline's reasons had one **[M]** | Phrase-based, not audited for truth; sample read found accurate statements | "The model likes to say a dish 'does not contain X'. We don't let it make that kind of assurance; reasons come from menu data." |
+| The pipeline sends about 42% less input text | 4,795 vs 2,768 and 16,980 vs 9,817 characters **[M]** | Characters, not tokens; no cost data | "Roughly 42% fewer characters per request; cost and token savings are plausible but I did not measure them." |
+| Nothing-qualifies cases need no recommendation call | 10 of 53 scenarios; 129 vs 159 calls in E1 **[M]** | Extraction call still runs in the app | "If no dish qualifies we answer immediately instead of asking the model." |
+| The baseline lost answers on the larger menu | 10 of 104 cut off; 16 of 16 fine with 8,192 tokens **[M]**, cause **[I]** | Stop reason not recorded; small re-run | "At 60 dishes some baseline answers were cut off; a bigger output limit fixed them, so I suspect budget pressure but didn't instrument it." |
+| Unsupported explanations are distinct from violations | scoring separates them; zero violations but many forbidden claims | Claims counted by phrase rules | "A wrong dish and an overconfident sentence are different failures; only the second showed up." |
+
+## What I would not claim
+
+- That the pipeline reduced the real model's constraint-violation rate. It did not, because the rate was zero.
+- That the system eliminates hallucinations, or that it makes the recommendations safe for real allergic guests.
+- That cost fell by 42% or 43%. Characters were measured; tokens, price and latency were not.
+- That truncation was caused by reasoning tokens or the output limit. That is an inference supported by one small re-run.
+- That fault-injection results describe how a real model behaves.
+- That results generalize beyond `claude-haiku-5-5`, this scenario set, structured inputs and menus of 15 to 60 dishes.
+- That the explanations are never wrong: they are built from menu data and inherit its errors.
+
+---
 
 ## Reproduce
 
 ```bash
-python -m evaluation.run --score evaluation/results/full-main.jsonl          # E1, offline
-python -m evaluation.run --score evaluation/results/full-scale60.jsonl       # E2, offline
+python -m evaluation.run --score evaluation/results/full-main.jsonl                 # E1, offline
+python -m evaluation.run --score evaluation/results/full-scale60.jsonl              # E2, offline
 python -m evaluation.run --score evaluation/results/scale60-max-tokens-8192.jsonl   # E3, offline
-python -m evaluation.fault_injection                                          # fault injection and prompt sizes, offline
-# to re-run with real model calls (needs ANTHROPIC_API_KEY; E1 is 288 calls with a small model):
+python -m evaluation.fault_injection          # fault injection and exact prompt sizes, offline
+# re-run with real model calls (needs ANTHROPIC_API_KEY; E1 is 288 calls):
 python -m evaluation.run --validate
 python -m evaluation.run --full --repeats 3
 python -m evaluation.run --full --repeats 2 --synthetic 45 --max-calls 300
 ```
 
-Files: `evaluation/scenarios.py` (scenarios), `evaluation/core.py` (oracle, both systems, scoring),
-`evaluation/synthetic.py` (scale menu), `evaluation/fault_injection.py`, `evaluation/run.py` (runner and report),
-`evaluation/results/` (raw outputs and summaries), `tests/test_evaluation.py` (the harness is itself tested).
+Files: `evaluation/scenarios.py`, `evaluation/core.py` (oracle, both systems, scoring, replay), `evaluation/synthetic.py`,
+`evaluation/fault_injection.py`, `evaluation/run.py`, `evaluation/results/` (raw outputs and summaries), `tests/test_evaluation.py`.

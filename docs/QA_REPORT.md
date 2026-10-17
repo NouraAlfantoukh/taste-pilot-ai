@@ -111,4 +111,4 @@ and unreviewed or tampered data still fails safe. Real services: `test_real_spri
   injection; the harness itself is tested (`tests/test_evaluation.py`).
 - **Delivery hygiene:** dependencies pinned, `.gitignore` covers every virtual environment and local assistant settings,
   `docs/DEPLOYMENT.md` documents the Streamlit Community Cloud deployment.
-- Offline suite at this point: **996 passed, 59 deselected** (the deselected tests are the opt-in real-service ones).
+- Offline suite at this point: **997 passed, 59 deselected** (the deselected tests are the opt-in real-service ones).
