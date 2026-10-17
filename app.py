@@ -102,7 +102,10 @@ def _sign_up(email: str, password: str) -> Outcome:
 
 
 def _continue_as_guest() -> None:
-    session["guest"] = True
+    # The flag must NOT share its name with a widget key: the guest button's key is "guest", and Streamlit gives a
+    # widget's key to the widget (its value is False on every run after the click) and deletes it when the widget is
+    # not rendered, which silently ended guest mode on the next message.
+    session["guest_mode"] = True
 
 
 def _sign_out() -> None:
@@ -191,7 +194,7 @@ def _persist() -> None:
 
 
 persistence_configured = config.is_supabase_configured()
-if persistence_configured and "auth" not in session and not session.get("guest"):
+if persistence_configured and "auth" not in session and not session.get("guest_mode"):
     _auth_screen()
     st.stop()
 
