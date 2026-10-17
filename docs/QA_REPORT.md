@@ -1,6 +1,8 @@
 # TastePilotAI — QA report
 
-Run date: 2026-10-17. Offline suite: **634 passed, 52 deselected** (the deselected tests are the opt-in `integration` ones).
+Run date: 2026-10-17. This report is chronological: the first sections describe the first QA pass (634 offline tests at that point) and
+each later sprint is an addendum at the end; **where an addendum contradicts an earlier section, the later one is current.** The latest
+verified offline result is in the README ("Testing") and in the final addendum. The deselected tests are the opt-in `integration` ones.
 
 ## Reply-quality rubric
 
@@ -72,7 +74,8 @@ Real-service total: 27 Supabase tests (172 s) + 7 Claude tests, all passed. Test
 4. **P2 — Extraction quality depends on the model.** The deterministic parts are covered; the model's choice of `memory_query`
    was confirmed only for the reported sentences on real Claude, not for every paraphrase.
 5. ~~P3 — footer claimed saving after a failed save~~ — fixed: the footer now says the change is applied to this conversation only (`test_the_footer_claims_saving_only_when_saving_works` and two app-level tests).
-6. **P3 — All dishes are "unverified"**, so any real allergy yields the "ask the staff" answer (intended, honest).
+6. ~~P3 — all dishes unverified~~ — superseded in Sprint 4: the 15 dishes are `verified` through a fingerprinted review record
+   ([MENU_REVIEW.md](MENU_REVIEW.md)); unreviewed or edited dishes still fail closed for allergic guests.
 
 ## Manual action still required
 
@@ -131,3 +134,16 @@ and unreviewed or tampered data still fails safe. Real services: `test_real_spri
 - **Evidence:** `tests/test_guest_session.py` (7 tests: consecutive messages, flag/widget-key separation, in-session continuity,
   "new chat", isolation between browser sessions, signed-in and no-account paths); 5 of the 7 fail on the old code and all pass on the fix.
   Offline suite: **1026 passed, 59 deselected**. Not yet observed on the deployed app; see the live check in the delivery notes.
+
+## Sprint 8 addendum (final submission audit)
+
+- **Offline suite, latest:** **1030 passed, 59 deselected** on Python 3.14.2 and, with the pinned `requirements-dev.txt` in a clean
+  environment, on Python 3.12.10 (the deployment runs 3.12).
+- **Fixes found by the audit:**
+  - A food requested in the first message («ابي وجبة بحرية») was lost when the assistant had to ask the initial allergy question first,
+    so the answer showed unfiltered dishes. The request is now kept while that question is open (3 regression tests in `tests/test_no_match_reasons.py`).
+  - The HTTP client libraries logged Supabase request URLs at INFO, and those URLs contain the signed-in user's id; they are now silenced to WARNING (`app.py`, 1 test).
+  - `.env.example` now lists every variable used by the opt-in tests (test users A, B and C).
+- **Documentation:** README rewritten as a landing page; `docs/TESTING_GUIDE.md` added; `docs/DEEP_DIVE.md` extended (request flow, filtering
+  boundaries, failure modes, testing methodology, interview explanation) with all numbers unchanged and re-checked against `evaluation/results/`.
+- **Not verified by this audit:** the deployed app was not opened or exercised by the assistant; the live checks are listed in the testing guide.

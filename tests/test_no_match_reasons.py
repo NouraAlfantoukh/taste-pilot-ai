@@ -138,3 +138,30 @@ def test_a_category_word_that_is_really_a_food_does_not_trigger_the_category_que
 def test_a_genuinely_unknown_category_still_asks():
     response = handle_message(guest(), "ابي شي فضائي", Scripted(ext(categories=["فضائي"], wants_recommendations=True)))
     assert response.type is T.CLARIFICATION and "ما عندي فئة" in response.reply_ar
+
+
+# ---- the food request survives the allergy question that may come first ----
+
+def test_a_food_request_made_before_the_allergy_question_is_still_applied_after_the_answer():
+    state = ConversationState()  # a fresh guest: the first message is answered by the allergy question
+    first = handle_message(state, "ابي وجبة بحرية", Scripted(ext(wants_recommendations=True, requested_ingredients=["بحريات"])))
+    assert first.type is T.CLARIFICATION and not first.recommendations
+    second = handle_message(state, "ما عندي حساسية", Scripted(ext(allergy_answer="none"), picks_for("dish_001", "dish_005", "dish_010")))
+    assert second.type is T.RECOMMENDATIONS and [d["id"] for d in second.recommendations] == ["dish_005"]  # only the seafood dish
+    assert "فيها مأكولات بحرية" in second.lead_ar
+    assert state.requested_ingredients == frozenset()  # per request: gone once answered
+    later = handle_message(state, "رشّح لي شي", Scripted(ext(wants_recommendations=True), picks_for("dish_001")))
+    assert [d["id"] for d in later.recommendations] == ["dish_001"]  # the next request is not filtered by the old one
+
+
+def test_a_new_food_request_replaces_the_pending_one_while_the_allergy_question_is_open():
+    state = ConversationState()
+    handle_message(state, "ابي سمك", Scripted(ext(wants_recommendations=True, requested_ingredients=["سمك"])))
+    done = handle_message(state, "ما عندي حساسية، بس أبي عدس", Scripted(ext(allergy_answer="none", requested_ingredients=["عدس"]), picks_for("dish_010", "dish_005")))
+    assert [d["id"] for d in done.recommendations] == ["dish_010"]
+
+
+def test_a_food_request_does_not_leak_into_an_unrelated_later_turn_without_a_pending_question():
+    state = ConversationState(allergy_status=AllergyStatus.NONE_REPORTED)
+    handle_message(state, "ابي سمك", Scripted(ext(wants_recommendations=True, requested_ingredients=["سمك"]), picks_for("dish_005")))
+    assert state.requested_ingredients == frozenset()

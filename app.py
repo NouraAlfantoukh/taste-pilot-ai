@@ -25,6 +25,10 @@ from ui import components, styles
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("tastepilot.app")
+# HTTP client libraries log every request URL at INFO. For Supabase that URL contains the signed-in user's id
+# (`...user_preferences?...&user_id=eq.<uuid>`), which should not end up in the hosting logs.
+for _noisy in ("httpx", "httpx2", "httpcore", "hpack"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 MAX_INPUT_CHARS = 1000
 

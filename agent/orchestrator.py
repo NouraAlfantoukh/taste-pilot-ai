@@ -296,6 +296,12 @@ def _update_state(old: ConversationState, ex: Extraction, text: str = "") -> tup
         s.requested_ingredients, s.override_ingredients = frozenset(add_req), frozenset()
     elif lifting and ex.confirm_override:
         s.requested_ingredients, s.override_ingredients = old.requested_ingredients, old.requested_ingredients
+    elif old.requested_ingredients and (
+        old.allergy_status is AllergyStatus.AWAITING_ANSWER or (old.pending is not None and old.pending.blocking)
+    ):
+        # The first message asked for a food ("وجبة بحرية") and the assistant had to ask about allergies first: the
+        # request must still be applied when the guest answers, exactly as a requested category already is.
+        s.requested_ingredients, s.override_ingredients = old.requested_ingredients, frozenset()
     else:  # per-request: anything else (including declining the override) drops it
         s.requested_ingredients, s.override_ingredients = frozenset(), frozenset()
     # (foods named through the category field are added to s.requested_ingredients further below)

@@ -21,9 +21,9 @@ Streamlit secrets (`config.py`), so no code change is needed to deploy and **no 
 1. **Push the repository** (done by the project owner; `.env`, virtual environments and `.claude/` are git-ignored).
 2. **Create the app:** share.streamlit.io -> *Create app* -> *Deploy a public app from GitHub* ->
    repository `NouraAlfantoukh/taste-pilot-ai`, branch `main`, main file `app.py`.
-3. **Advanced settings -> Python version:** choose **3.12** or **3.13**. The code was developed and fully tested only on
-   Python 3.14.2; if the platform fails to install the pinned packages on your chosen version, switch to the other one
-   (check the build log) rather than loosening the pins.
+3. **Advanced settings -> Python version:** the live deployment runs **Python 3.12** (its build log shows 3.12.x installing every pinned
+   package from `requirements.txt` without errors). Choose 3.12 or 3.13; the offline suite was run on 3.12 and 3.14. The `.devcontainer` folder
+   (from the platform's template) uses a Python 3.11 image, which was not tested.
 4. **Advanced settings -> Secrets:** paste this TOML, with your own values (type them in the Streamlit dashboard, never
    in chat or in a file you commit):
 

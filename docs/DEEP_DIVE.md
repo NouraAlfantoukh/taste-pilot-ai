@@ -1,4 +1,6 @@
-# Deep Dive: constraining an LLM with deterministic code
+# Engineering Reliable and Cost-Efficient LLM Recommendations Through Deterministic Constraint Enforcement
+
+*TastePilotAI Deep Dive. Companion documents: [README](../README.md), [TESTING_GUIDE](TESTING_GUIDE.md), [QA_REPORT](QA_REPORT.md), [MENU_REVIEW](MENU_REVIEW.md).*
 
 > **Design principle.** Use the LLM for language understanding and flexible recommendations. Use deterministic code to
 > enforce hard constraints, reduce unnecessary context, and validate outputs.
@@ -80,6 +82,28 @@ flowchart LR
     G --> A[Reply and dish cards]
 ```
 
+### Request flow, step by step
+
+1. **Extract.** The model reads the guest's Arabic message and returns structured fields; invalid output is an error, never "no constraints".
+2. **Update state.** Plain Python merges the fields into the conversation state, resolves words through the taxonomy, and decides whether a
+   clarification (for example "which kind of nut?") must come before any recommendation. Confirmed durable facts are saved (signed-in guests).
+3. **Filter.** `filter_dishes` removes every dish that breaks a hard constraint and, for a guest with a declared allergy, every dish whose
+   allergen data has not been reviewed.
+4. **Short-circuit.** If no dish is eligible, a fixed Arabic answer naming the real reason is returned and the recommendation call is skipped.
+5. **Recommend.** Otherwise the model receives only the eligible dishes and picks and orders among them.
+6. **Validate.** The guard keeps only picks that are eligible dish ids; malformed output falls back to the top eligible dishes without model prose.
+7. **Explain.** The reason under each dish is built from the dish's recorded fields and the constraints in force, not from model text.
+
+### What deterministic eligibility filtering covers, and where it stops
+
+| Covered (hard constraints, enforced in code) | Boundary |
+|---|---|
+| Allergen categories and ingredient-level allergies, matched through taxonomy families (cheese is dairy, hammour is fish) | Only the 14 tracked allergen categories; an allergy to anything else is matched only when the guest names the ingredient |
+| Disliked ingredients, vegetarian diet, maximum price, spice floor and ceiling, requested menu category | Serving temperature is a soft preference (a mismatch downgrades a dish; it does not hard-exclude one) |
+| Unreviewed or inconsistent allergen data: excluded for allergic guests | The review checks that the record is coherent and complete, not that the restaurant's data is true |
+| Unknown ingredient ids and unresolved allergen terms: excluded or asked about, never assumed safe | The filter cannot know about cross-contact, recipe changes, or an ingredient missing from the record |
+| | It does not judge taste or relevance: that remains the model's job among the eligible dishes |
+
 ### Prompt-only versus pipeline (the two systems in the experiment)
 
 | | Prompt-only (baseline) | Pipeline (production) |
@@ -98,6 +122,15 @@ application), so the comparison is not against a straw man. Exact text: `evaluat
 Rules decide eligibility well and cannot do the rest: understanding colloquial Gulf Arabic ("ما أبغى شي ثقيل"), mapping "حليب ومشتقاته" to an
 allergen, choosing and ordering among acceptable dishes in line with the request. The pipeline therefore narrows the model's operating space
 instead of removing the model.
+
+### Design decisions
+
+- **Separate hard from soft.** Anything that must never be violated is a deterministic filter; anything that is a matter of judgement (which of the
+  acceptable dishes best fits the request) is left to the model.
+- **Fail closed.** When the data is unreviewed, ambiguous or unknown, the answer is "exclude" or "ask", never "assume fine".
+- **Do not trust model prose as evidence.** The model chooses; code explains.
+- **Spend a model call only when there is something to choose from.**
+- **Keep the evidence reproducible.** Raw outputs are stored and every figure can be recomputed offline.
 
 ### Trade-offs accepted
 
@@ -251,6 +284,18 @@ is where the guarantee comes from.
 
 ---
 
+## Example failure modes and how the pipeline handles them
+
+| Failure mode | How it is handled | Evidence |
+|---|---|---|
+| The model names a dish the guest must not have (including when the request pushes for it, for example "recommend the kunafa" with a tree-nut allergy) | The dish is not in the model's candidate list, and a pick outside the eligible set is dropped by the guard | Fault injection (names every dish): 0 of 53 scenarios violated **[S]**; 0 violations in 265 real pipeline runs **[M]**; unit test over every allergen in the menu |
+| The model returns malformed or non-JSON output | Fallback to the top eligible dishes, with no model-written text | Unit test; 0 unreadable pipeline outputs in E1 and E2 **[M]** |
+| The model writes "does not contain X" or "safe" next to a dish | The model's reason text is never displayed; reasons come from menu data | Replay of stored outputs: 0 of 440 displayed reasons contained such a claim **[M]** |
+| Nothing qualifies | Fixed answer, no recommendation call, and the answer names the real cause (a saved dislike, a confirmed allergen, the budget or category). A live smoke test once showed a saved dislike reported as an "allergen data" problem; it was fixed and covered by regression tests | 10 of 53 scenarios needed no call **[M]**; `tests/test_no_match_reasons.py` |
+| Allergen data is unreviewed or was edited after review | The dish silently loses `verified` and is excluded for allergic guests | 5 unreviewed-data scenarios, 0 violations **[M]**; tamper tests in `tests/test_menu_review.py` |
+| The guest uses an ambiguous allergen word ("فستق": peanut or pistachio) | The assistant asks which, blocks recommendations meanwhile, and stores nothing unconfirmed | `tests/test_allergy_clarification.py` |
+| A long prompt makes the answer unusable (cut off mid-JSON) | The pipeline's shorter prompts avoided it in this experiment | 10 of 104 baseline answers cut off at 60 dishes, 0 for the pipeline **[M]**; cause **[I]** |
+
 ## G. Limitations and next steps
 
 **Limitations (in order of importance)**
@@ -307,6 +352,28 @@ guarantee, validated by simulation, and on measured operational differences, not
 - That the explanations are never wrong: they are built from menu data and inherit its errors.
 
 ---
+
+## Testing methodology
+
+- **Offline unit and conversation tests** (about a thousand; scripted model, a fake Supabase that emulates Row Level Security) cover the filter,
+  taxonomy, guard, explanations, menu data and review, multi-turn Arabic conversations, persistence, user isolation and failure handling.
+- **Oracle consistency:** the evaluation oracle is checked against the production filter on all 53 scenarios and on both menus.
+- **The harness is itself tested:** scoring, parsing, the synthetic menu, fault injection, prompt-size measurement and the replay of stored outputs.
+- **Deliberate-break checks:** during development, selected tests were verified to fail when the behaviour they protect was broken on purpose.
+- **Real-service tests (opt-in, not part of the offline suite):** Row Level Security with two authenticated users, persistence across sessions and
+  key conversations on real Claude, run during development (results in [QA_REPORT.md](QA_REPORT.md)).
+- **Reproducibility:** raw model outputs are stored; the figures are recomputed offline (commands below). A new real-model run will not reproduce
+  the raw outputs exactly because sampling is not seeded.
+
+## Interview-ready explanation
+
+"I split the job in two. The language model understands the guest's Arabic and chooses among dishes; plain code decides which dishes are even
+allowed, shows the model only those, checks what it picked, and writes the explanations from the menu data. I compared that with putting the
+whole menu and the rules in one prompt, on 53 scenarios with a real model. The prompt-only version broke no constraint, so I do not claim the
+pipeline made the model safer. What I measured is that the pipeline sends about 42% fewer characters, skips the recommendation call when nothing
+qualifies, avoided the truncation the baseline hit on a 60-dish menu, and never shows the model's 'does not contain X' assurances. When I replace
+the model with one that ignores every rule, the baseline fails 42 of 53 scenarios and the pipeline none: the guarantee comes from the code, not from
+how the model behaves. I did not measure tokens, cost or latency, and the cause of the truncation is an inference."
 
 ## Reproduce
 

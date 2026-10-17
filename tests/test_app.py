@@ -144,3 +144,11 @@ def test_ask_request_reply_after_no_allergies(launch):
     send(at, "هلا")
     send(at, "ما عندي حساسية")
     assert ASK_REQUEST_AR in html(at)
+
+
+def test_http_client_loggers_do_not_write_request_urls_that_contain_the_user_id(launch):
+    import logging
+
+    launch(Scripted())
+    for name in ("httpx", "httpx2", "httpcore"):
+        assert logging.getLogger(name).getEffectiveLevel() >= logging.WARNING
