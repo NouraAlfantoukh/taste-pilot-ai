@@ -26,7 +26,7 @@ from agent.state import (
     PendingTerm,
 )
 from services import taxonomy
-from services.constraints import SAFETY_REASONS, Constraints, ExclusionReason, InvalidConstraintError
+from services.constraints import Constraints, ExclusionReason, InvalidConstraintError
 from services.llm_service import (
     ProviderError,
     ProviderNotConfiguredError,
@@ -183,6 +183,15 @@ def no_match_message_ar(constraints: Constraints, result: FilterResult) -> str:
         what = " أو ".join(taxonomy.category_name_ar(k) for k in sorted(constraints.categories)) or "أطباقًا"
         return TEMPERATURE_UNAVAILABLE_AR.format(wanted=wanted, what=what)
     labels = constraint_labels_ar(constraints)
+    allergies = sorted(
+        [taxonomy.allergen_name_ar(a) for a in constraints.excluded_allergens]
+        + [taxonomy.ingredient_name_ar(i) for i in constraints.allergy_ingredients]
+    )
+    if allergies:  # an allergy is named as the reason and is never offered for relaxing
+        text = f"ما لقيت طبقًا يناسب حساسيتك من {_join_ar(allergies)}"
+        text += f" مع شروطك الثانية ({'، '.join(labels)})." if labels else "."
+        text += " ما راح أقترح طبقًا يخالف حساسيتك."
+        return text + (" تبغى أخفف الشروط الثانية؟" if labels else "")
     if labels:
         return f"ما لقيت طبقًا يطابق كل شروطك ({'، '.join(labels)}). تبغى أخفف أحد الشروط؟"
     return NO_MATCHING_DISH_MESSAGE_AR
@@ -200,7 +209,9 @@ def compose_reply(
     With no eligible dish this answers in Arabic without calling the LLM.
     """
     if not result.eligible:
-        if any(reason in SAFETY_REASONS for exclusion in result.excluded for reason in exclusion.reasons):
+        # "Allergen data not verified" is the reason only when that is why EVERY dish was excluded. A saved dislike,
+        # a confirmed allergen, the budget or the category are named for what they are.
+        if result.excluded and all(ExclusionReason.INCOMPLETE_ALLERGEN_DATA in e.reasons for e in result.excluded):
             return Composed(NO_VERIFIED_OPTION_MESSAGE_AR)
         return Composed(no_match_message_ar(constraints, result) if constraints else NO_MATCHING_DISH_MESSAGE_AR)
     applied = constraint_labels_ar(constraints) if constraints else []
@@ -287,6 +298,7 @@ def _update_state(old: ConversationState, ex: Extraction, text: str = "") -> tup
         s.requested_ingredients, s.override_ingredients = old.requested_ingredients, old.requested_ingredients
     else:  # per-request: anything else (including declining the override) drops it
         s.requested_ingredients, s.override_ingredients = frozenset(), frozenset()
+    # (foods named through the category field are added to s.requested_ingredients further below)
     flags.understood_dislikes = sorted(taxonomy.ingredient_name_ar(i) for i in add_i - c.excluded_ingredients)
     new_categories: set[str] = set()
     generic_seen = False
@@ -297,7 +309,12 @@ def _update_state(old: ConversationState, ex: Extraction, text: str = "") -> tup
         try:
             new_categories |= taxonomy.resolve_categories(term)
         except taxonomy.UnknownTermError:
-            flags.unresolved_categories.append(term)
+            try:  # not a menu category, but a food ("وجبة بحرية"): the guest is asking for that food
+                foods = taxonomy.resolve_ingredient(term)
+            except taxonomy.UnknownTermError:
+                flags.unresolved_categories.append(term)
+            else:
+                s.requested_ingredients = frozenset(s.requested_ingredients | foods)
     # A fresh request for food in general ("أبي أكل ...") must not inherit the previous request's category.
     # Deterministic on purpose: it does not depend on the model remembering to emit clear=["category"].
     allergy_turn = old.allergy_status is AllergyStatus.AWAITING_ANSWER or ex.allergy_answer is not None or bool(add_a or add_ai)

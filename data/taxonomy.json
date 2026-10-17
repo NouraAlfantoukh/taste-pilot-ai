@@ -5,7 +5,7 @@
     "eggs": {"name_ar": "البيض", "aliases_ar": ["بيض", "بيضة"], "aliases_en": ["egg", "eggs"]},
     "peanuts": {"name_ar": "الفول السوداني", "aliases_ar": ["فول سوداني", "فستق سوداني", "فستق عبيد"], "aliases_en": ["peanut", "peanuts"]},
     "tree_nuts": {"name_ar": "المكسرات الشجرية", "aliases_ar": ["مكسرات شجرية", "لوز", "اللوز", "جوز", "الجوز", "بندق", "البندق", "كاجو", "الكاجو", "فستق حلبي", "الفستق الحلبي", "بستاشيو", "البستاشيو", "فستق بستاشيو", "الفستق البستاشيو"], "aliases_en": ["tree nuts", "tree nut", "pistachio", "pistachios"]},
-    "fish": {"name_ar": "الأسماك", "aliases_ar": ["سمك", "السمك", "أسماك"], "aliases_en": ["fish"]},
+    "fish": {"name_ar": "الأسماك", "aliases_ar": ["سمك", "السمك", "أسماك"], "aliases_en": ["fish"], "families": ["seafood"]},
     "crustaceans": {"name_ar": "القشريات", "aliases_ar": ["قشريات", "روبيان", "الروبيان", "جمبري", "الجمبري", "سلطعون", "السلطعون"], "aliases_en": ["crustaceans", "shrimp", "prawn", "crab", "lobster"]},
     "molluscs": {"name_ar": "الرخويات", "aliases_ar": ["رخويات", "محار", "المحار", "حبار", "الحبار", "أخطبوط", "الأخطبوط"], "aliases_en": ["molluscs", "mollusks", "squid", "mussels"]},
     "sesame": {"name_ar": "السمسم", "aliases_ar": ["سمسم", "طحينة", "الطحينة"], "aliases_en": ["sesame"]},
@@ -36,7 +36,7 @@
     "cheese": {"name_ar": "جبن", "aliases_ar": ["الجبن", "جبنة", "أجبان", "الأجبان"], "families": ["dairy"], "aliases_en": ["cheese"]},
     "meat": {"name_ar": "لحم", "aliases_ar": ["اللحم", "لحوم", "اللحوم"], "aliases_en": ["meat"]},
     "poultry": {"name_ar": "دواجن", "aliases_ar": ["الدواجن"], "aliases_en": ["poultry"]},
-    "fish": {"name_ar": "سمك", "aliases_ar": ["السمك", "أسماك", "الأسماك"], "allergens": ["fish"], "aliases_en": ["fish"]},
+    "fish": {"name_ar": "سمك", "aliases_ar": ["السمك", "أسماك", "الأسماك"], "allergens": ["fish"], "aliases_en": ["fish"], "families": ["seafood"]},
     "spice_blend": {"name_ar": "خلطة بهارات", "aliases_ar": ["خلطات البهارات"], "compound": true, "aliases_en": ["spice mix", "spice blend"]},
     "dough": {"name_ar": "عجينة", "aliases_ar": ["العجينة"], "allergens": ["gluten"], "aliases_en": ["dough"]},
     "rice": {"name_ar": "أرز", "aliases_ar": ["الأرز", "رز"], "aliases_en": ["rice"]},
@@ -96,7 +96,7 @@
     "ice": {"name_ar": "ثلج", "aliases_ar": ["الثلج"], "aliases_en": ["ice"]},
     "mushroom": {"name_ar": "فطر", "aliases_ar": ["الفطر", "فطريات", "مشروم", "المشروم", "عيش الغراب", "الفطريات"], "aliases_en": ["mushroom", "mushrooms"]},
     "egg": {"name_ar": "بيض", "aliases_ar": ["البيض", "بيضة"], "aliases_en": ["egg", "eggs"], "allergens": ["eggs"]},
-    "shrimp": {"name_ar": "روبيان", "aliases_ar": ["الروبيان", "جمبري", "الجمبري", "ربيان"], "aliases_en": ["shrimp", "prawn", "prawns"], "allergens": ["crustaceans"]},
+    "shrimp": {"name_ar": "روبيان", "aliases_ar": ["الروبيان", "جمبري", "الجمبري", "ربيان"], "aliases_en": ["shrimp", "prawn", "prawns"], "allergens": ["crustaceans"], "families": ["seafood"]},
     "eggplant": {"name_ar": "باذنجان", "aliases_ar": ["الباذنجان"], "aliases_en": ["eggplant", "aubergine"]},
     "olives": {"name_ar": "زيتون", "aliases_ar": ["الزيتون"], "aliases_en": ["olives", "olive"]},
     "okra": {"name_ar": "بامية", "aliases_ar": ["البامية"], "aliases_en": ["okra"]},
@@ -111,6 +111,7 @@
     "cloves": {"name_ar": "قرنفل", "aliases_ar": ["القرنفل"], "aliases_en": ["cloves", "clove"]},
     "black_pepper": {"name_ar": "فلفل أسود", "aliases_ar": ["الفلفل الأسود"], "aliases_en": ["black pepper"]},
     "turmeric": {"name_ar": "كركم", "aliases_ar": ["الكركم"], "aliases_en": ["turmeric"]},
-    "zucchini": {"name_ar": "كوسة", "aliases_ar": ["الكوسة", "كوسا"], "aliases_en": ["zucchini", "courgette"]}
+    "zucchini": {"name_ar": "كوسة", "aliases_ar": ["الكوسة", "كوسا"], "aliases_en": ["zucchini", "courgette"]},
+    "seafood": {"name_ar": "مأكولات بحرية", "aliases_ar": ["بحريات", "البحريات", "بحرية", "بحريه", "بحري", "المأكولات البحرية", "ثمار البحر", "الاكل البحري", "أكل بحري"], "aliases_en": ["seafood", "sea food"]}
   }
 }

@@ -112,3 +112,10 @@ and unreviewed or tampered data still fails safe. Real services: `test_real_spri
 - **Delivery hygiene:** dependencies pinned, `.gitignore` covers every virtual environment and local assistant settings,
   `docs/DEPLOYMENT.md` documents the Streamlit Community Cloud deployment.
 - Offline suite at this point: **997 passed, 59 deselected** (the deselected tests are the opt-in real-service ones).
+
+## Sprint 6 addendum (live smoke-test failure: seafood)
+
+- **Symptom:** "ابي وجبه بحريه" -> "اطباق رئيسية بس بحريات يعني" -> "اقصد سمك" ended with "allergen data is incomplete, tell the staff about your allergy" although no allergy was mentioned.
+- **Root cause (reproduced deterministically, `tests/test_no_match_reasons.py`):** `compose_reply` chose the "allergen data not verified" message whenever ANY exclusion reason was in `SAFETY_REASONS`, and that set included `EXCLUDED_INGREDIENT`. A saved dislike (or a confirmed allergen on reviewed data) that left no dish therefore produced an allergy-data message. Separately, seafood wording ("بحريات", "وجبة بحرية") was an unknown food, so "no dish contains بحريات" was said although the grilled fish is seafood.
+- **Fix:** the data-not-verified message is used only when every excluded dish lacks reviewed allergen data; otherwise the reply names the real reason (saved dislikes, a confirmed allergy that is never offered for relaxing, budget, category). A `seafood` family (fish, shrimp) resolves the wording, and a category word that is really a food becomes a request for that food. The bare word "بحريات" as an ALLERGY term stays ambiguous and still asks which allergen.
+- **Evidence:** 22 new regression tests; real-model re-run of the conversation under four saved-profile states; 20 real-service integration tests re-run. Offline suite: **1019 passed, 59 deselected**.
